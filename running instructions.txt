@@ -1,0 +1,22 @@
+build graph
+
+cd pipedream/profiler/image_classification
+CUDA_VISIBLE_DEVICES=0 python main.py -a resnet101 -b 128 --data_dir <path to ImageNet directory>
+
+cd pipedream/optimizer
+python optimizer_graph_hierarchical.py -f ../profiler/image_classification/profiles/resnet101/graph.txt -n 4 --activation_compression_ratio 1 -o resnet101_partitioned
+
+python convert_graph_to_model.py -f resnet101_partitioned/gpus=2.txt -n ResNet101Partitioned -a resnet101 -o ../runtime/image_classification/models/resnet101/gpus=2 --stage_to_num_ranks 0:1,1:1
+
+
+
+cd pipedream/runtime
+Data Parallelism
+
+python driver.py --config_file image_classification/driver_configs/resnet101_2dp.yml --launch_single_container --mount_directories /mnt /datadrive3
+
+Pipeline Parallelism
+
+python driver.py --config_file image_classification/driver_configs/resnet101_2pipedream.yml --launch_single_container --mount_directories /mnt /datadrive3
+
+
